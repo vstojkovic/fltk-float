@@ -3,15 +3,19 @@ use std::ops::{Deref, DerefMut};
 
 use fltk::prelude::*;
 
-use super::{LayoutElement, Size};
+use super::{LayoutElement, LayoutWidgetWrapper, Size};
 
 pub struct ButtonElement<B: ButtonExt + Clone> {
     widget: B,
 }
 
-impl<B: ButtonExt + Clone> ButtonElement<B> {
-    pub fn wrap(widget: B) -> Self {
+impl<B: ButtonExt + Clone> LayoutWidgetWrapper<B> for ButtonElement<B> {
+    fn wrap(widget: B) -> Self {
         Self { widget }
+    }
+
+    fn widget(&self) -> B {
+        self.widget.clone()
     }
 }
 
@@ -34,7 +38,7 @@ impl<B: ButtonExt + Clone> LayoutElement for ButtonElement<B> {
     }
 
     fn layout(&self, x: i32, y: i32, width: i32, height: i32) {
-        self.widget.clone().resize(x, y, width, height)
+        self.widget().resize(x, y, width, height)
     }
 }
 

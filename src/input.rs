@@ -2,15 +2,19 @@ use std::ops::{Deref, DerefMut};
 
 use fltk::prelude::*;
 
-use super::{LayoutElement, Size};
+use super::{LayoutElement, LayoutWidgetWrapper, Size};
 
 pub struct InputElement<I: InputExt + Clone> {
     widget: I,
 }
 
-impl<I: InputExt + Clone> InputElement<I> {
-    pub fn wrap(widget: I) -> Self {
+impl<I: InputExt + Clone> LayoutWidgetWrapper<I> for InputElement<I> {
+    fn wrap(widget: I) -> Self {
         Self { widget }
+    }
+
+    fn widget(&self) -> I {
+        self.widget.clone()
     }
 }
 
@@ -32,7 +36,7 @@ impl<I: InputExt + Clone> LayoutElement for InputElement<I> {
     }
 
     fn layout(&self, x: i32, y: i32, width: i32, height: i32) {
-        self.widget.clone().resize(x, y, width, height)
+        self.widget().resize(x, y, width, height)
     }
 }
 

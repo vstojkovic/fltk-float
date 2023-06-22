@@ -3,15 +3,18 @@ use std::ops::{Deref, DerefMut};
 use fltk::frame::Frame;
 use fltk::prelude::*;
 
-use super::{LayoutElement, Size};
+use super::{LayoutElement, LayoutWidgetWrapper, Size};
 
 pub struct FrameElement {
     widget: Frame,
 }
 
-impl FrameElement {
-    pub fn wrap(widget: Frame) -> Self {
+impl LayoutWidgetWrapper<Frame> for FrameElement {
+    fn wrap(widget: Frame) -> Self {
         Self { widget }
+    }
+    fn widget(&self) -> Frame {
+        self.widget.clone()
     }
 }
 
@@ -32,7 +35,7 @@ impl LayoutElement for FrameElement {
     }
 
     fn layout(&self, x: i32, y: i32, width: i32, height: i32) {
-        self.widget.clone().resize(x, y, width, height);
+        self.widget().resize(x, y, width, height);
     }
 }
 

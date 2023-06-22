@@ -1,5 +1,6 @@
 pub mod button;
 pub mod frame;
+pub mod grid;
 pub mod input;
 pub mod misc;
 
@@ -12,4 +13,9 @@ pub trait LayoutElement {
 pub struct Size {
     pub width: i32,
     pub height: i32,
+}
+
+pub trait LayoutWidgetWrapper<W: Clone>: LayoutElement {
+    fn wrap(widget: W) -> Self;
+    fn widget(&self) -> W;
 }

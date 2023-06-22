@@ -3,15 +3,19 @@ use std::ops::{Deref, DerefMut};
 use fltk::misc::InputChoice;
 use fltk::prelude::*;
 
-use super::{LayoutElement, Size};
+use super::{LayoutElement, LayoutWidgetWrapper, Size};
 
 pub struct InputChoiceElement {
     widget: InputChoice,
 }
 
-impl InputChoiceElement {
-    pub fn wrap(widget: InputChoice) -> Self {
+impl LayoutWidgetWrapper<InputChoice> for InputChoiceElement {
+    fn wrap(widget: InputChoice) -> Self {
         Self { widget }
+    }
+
+    fn widget(&self) -> InputChoice {
+        self.widget.clone()
     }
 }
 
