@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 
 use fltk::prelude::*;
 
-use super::LayoutElement;
+use super::{LayoutElement, Size};
 
 pub struct ButtonElement<B: ButtonExt + Clone> {
     widget: B,
@@ -16,7 +16,7 @@ impl<B: ButtonExt + Clone> ButtonElement<B> {
 }
 
 impl<B: ButtonExt + Clone> LayoutElement for ButtonElement<B> {
-    fn min_size(&self) -> (i32, i32) {
+    fn min_size(&self) -> Size {
         let (label_width, label_height) = self.widget.measure_label();
         let up_frame = self.widget.frame();
         let down_frame = self.widget.down_frame();
@@ -27,10 +27,10 @@ impl<B: ButtonExt + Clone> LayoutElement for ButtonElement<B> {
         let frame_width = frame_dx + frame_dw;
         let frame_height = frame_dy + frame_dh;
 
-        (
-            label_width + frame_width + label_height,
-            label_height + 2 * frame_height,
-        )
+        Size {
+            width: label_width + frame_width + label_height,
+            height: label_height + 2 * frame_height,
+        }
     }
 
     fn layout(&self, x: i32, y: i32, width: i32, height: i32) {

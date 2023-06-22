@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use fltk::prelude::*;
 
-use super::LayoutElement;
+use super::{LayoutElement, Size};
 
 pub struct InputElement<I: InputExt + Clone> {
     widget: I,
@@ -15,7 +15,7 @@ impl<I: InputExt + Clone> InputElement<I> {
 }
 
 impl<I: InputExt + Clone> LayoutElement for InputElement<I> {
-    fn min_size(&self) -> (i32, i32) {
+    fn min_size(&self) -> Size {
         fltk::draw::set_font(self.widget.text_font(), self.widget.text_size());
         let text_height = fltk::draw::height();
         let frame = self.widget.frame();
@@ -25,7 +25,10 @@ impl<I: InputExt + Clone> LayoutElement for InputElement<I> {
         let frame_dh = frame.dh();
         let frame_width = frame_dx + frame_dw;
         let frame_height = frame_dy + frame_dh;
-        (frame_width, text_height + frame_height)
+        Size {
+            width: frame_width,
+            height: text_height + frame_height,
+        }
     }
 
     fn layout(&self, x: i32, y: i32, width: i32, height: i32) {

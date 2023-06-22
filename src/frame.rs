@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 use fltk::frame::Frame;
 use fltk::prelude::*;
 
-use super::LayoutElement;
+use super::{LayoutElement, Size};
 
 pub struct FrameElement {
     widget: Frame,
@@ -16,7 +16,7 @@ impl FrameElement {
 }
 
 impl LayoutElement for FrameElement {
-    fn min_size(&self) -> (i32, i32) {
+    fn min_size(&self) -> Size {
         let (label_width, label_height) = self.widget.measure_label();
         let frame = self.widget.frame();
         let frame_dx = frame.dx();
@@ -25,7 +25,10 @@ impl LayoutElement for FrameElement {
         let frame_dh = frame.dh();
         let frame_width = frame_dx + frame_dw;
         let frame_height = frame_dy + frame_dh;
-        (label_width + 2 * frame_width, label_height + frame_height)
+        Size {
+            width: label_width + 2 * frame_width,
+            height: label_height + frame_height,
+        }
     }
 
     fn layout(&self, x: i32, y: i32, width: i32, height: i32) {

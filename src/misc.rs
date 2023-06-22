@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 use fltk::misc::InputChoice;
 use fltk::prelude::*;
 
-use super::LayoutElement;
+use super::{LayoutElement, Size};
 
 pub struct InputChoiceElement {
     widget: InputChoice,
@@ -16,7 +16,7 @@ impl InputChoiceElement {
 }
 
 impl LayoutElement for InputChoiceElement {
-    fn min_size(&self) -> (i32, i32) {
+    fn min_size(&self) -> Size {
         fltk::draw::set_font(self.widget.text_font(), self.widget.text_size());
         let text_height = fltk::draw::height();
         let text_width = self
@@ -36,10 +36,10 @@ impl LayoutElement for InputChoiceElement {
         let frame_width = frame_dx + frame_dw;
         let frame_height = frame_dy + frame_dh;
 
-        (
-            3 * frame_width + text_width + text_height,
-            text_height + frame_height,
-        )
+        Size {
+            width: 3 * frame_width + text_width + text_height,
+            height: text_height + frame_height,
+        }
     }
 
     fn layout(&self, x: i32, y: i32, width: i32, height: i32) {
