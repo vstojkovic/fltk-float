@@ -8,12 +8,20 @@ pub struct CellBuilder<'l> {
 }
 
 impl<'l> CellBuilder<'l> {
-    pub(super) fn new(owner: &'l mut GridBuilder, row: usize, col: usize) -> Self {
+    pub(super) fn new(
+        owner: &'l mut GridBuilder,
+        row: usize,
+        col: usize,
+        row_span: usize,
+        col_span: usize,
+    ) -> Self {
         Self {
             owner,
             props: CellProperties {
                 row,
                 col,
+                row_span,
+                col_span,
                 horz_align: CellAlign::Stretch,
                 vert_align: CellAlign::Center,
             },
@@ -31,25 +39,24 @@ impl<'l> CellBuilder<'l> {
     }
 
     pub fn skip(self) {
-        self.owner.props.rows[self.props.row].cells[self.props.col] = StripeCell::Skipped;
-        self.owner.props.cols[self.props.col].cells[self.props.row] = StripeCell::Skipped;
+        let top = self.props.row;
+        let bottom = top + self.props.row_span;
+        let left = self.props.col;
+        let right = left + self.props.col_span;
+        for row in top..bottom {
+            for col in left..right {
+                self.owner.props.rows[row].cells[col] = StripeCell::Skipped;
+                self.owner.props.cols[col].cells[row] = StripeCell::Skipped;
+            }
+        }
     }
 
     pub fn add<E: LayoutElement + 'static>(self, element: E) {
-        let row = self.props.row;
-        let col = self.props.col;
-
-        let cell = Cell {
+        self.owner.add_cell(Cell {
             element: Box::new(element),
             min_size: Default::default(),
             props: self.props,
-        };
-
-        let cell_idx = self.owner.props.cells.len();
-        self.owner.props.cells.push(cell);
-
-        self.owner.props.rows[row].cells[col] = StripeCell::Cell(cell_idx);
-        self.owner.props.cols[col].cells[row] = StripeCell::Cell(cell_idx);
+        });
     }
 
     pub fn wrapped<W: Clone, L: LayoutWidgetWrapper<W> + 'static>(self, wrapper: L) -> W {

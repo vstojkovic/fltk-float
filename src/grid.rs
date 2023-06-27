@@ -34,6 +34,7 @@ struct GridProperties {
     row_spacing: i32,
     col_spacing: i32,
     cells: Vec<Cell>,
+    spans: Vec<Cell>,
     rows: Vec<Stripe>,
     cols: Vec<Stripe>,
 }
@@ -55,6 +56,8 @@ struct Cell {
 struct CellProperties {
     row: usize,
     col: usize,
+    row_span: usize,
+    col_span: usize,
     horz_align: CellAlign,
     vert_align: CellAlign,
 }
@@ -74,6 +77,7 @@ enum StripeCell {
     Free,
     Skipped,
     Cell(usize),
+    Span,
 }
 
 impl StripeCell {
@@ -113,36 +117,31 @@ impl Grid {
         let height =
             self.props.group.height() - (self.props.padding.top + self.props.padding.bottom);
 
-        let col_bounds = Self::calc_stripe_bounds(
+        // TODO: Eliminate unnecessary allocation
+        let col_bounds = calc_stripe_bounds(
             width,
             &self.props.cols,
             &self.stretch_cols,
             self.props.col_spacing,
         );
-        let row_bounds = Self::calc_stripe_bounds(
+        let row_bounds = calc_stripe_bounds(
             height,
             &self.props.rows,
             &self.stretch_rows,
             self.props.row_spacing,
         );
 
-        let mut cell_layouts = Vec::with_capacity(self.props.cells.len());
         for cell in self.props.cells.iter() {
-            let (x, width) = col_bounds[cell.props.col];
-            let (y, height) = row_bounds[cell.props.row];
-            cell_layouts.push((x, y, width, height));
-        }
-
-        for (cell_idx, cell) in self.props.cells.iter().enumerate() {
-            let (cell_x, cell_y, cell_width, cell_height) = cell_layouts[cell_idx];
-            let (widget_x, widget_width) = Self::calc_widget_bounds(
+            let (cell_x, cell_width) = col_bounds[cell.props.col];
+            let (cell_y, cell_height) = row_bounds[cell.props.row];
+            let (widget_x, widget_width) = calc_widget_bounds(
                 x,
                 cell_x,
                 cell_width,
                 cell.min_size.width,
                 cell.props.horz_align,
             );
-            let (widget_y, widget_height) = Self::calc_widget_bounds(
+            let (widget_y, widget_height) = calc_widget_bounds(
                 y,
                 cell_y,
                 cell_height,
@@ -152,124 +151,223 @@ impl Grid {
             cell.element
                 .layout(widget_x, widget_y, widget_width, widget_height);
         }
+
+        for span in self.props.spans.iter() {
+            let left_col = span.props.col;
+            let right_col = left_col + span.props.col_span - 1;
+            let span_x = col_bounds[left_col].0;
+            let span_width = col_bounds[right_col].0 + col_bounds[right_col].1 - span_x;
+
+            let top_row = span.props.row;
+            let bottom_row = top_row + span.props.row_span - 1;
+            let span_y = row_bounds[top_row].0;
+            let span_height = row_bounds[bottom_row].0 + row_bounds[bottom_row].1 - span_y;
+
+            let (widget_x, widget_width) = calc_widget_bounds(
+                x,
+                span_x,
+                span_width,
+                span.min_size.width,
+                span.props.horz_align,
+            );
+            let (widget_y, widget_height) = calc_widget_bounds(
+                y,
+                span_y,
+                span_height,
+                span.min_size.height,
+                span.props.vert_align,
+            );
+            span.element
+                .layout(widget_x, widget_y, widget_width, widget_height);
+        }
     }
 
-    fn new(mut props: GridProperties) -> Self {
-        let mut min_size = Size {
-            width: (props.cols.len() - 1) as i32 * props.col_spacing,
-            height: (props.rows.len() - 1) as i32 * props.row_spacing,
-        };
-        let mut stretch_rows = Vec::new();
-        let mut stretch_cols = Vec::new();
+    fn new(props: GridProperties) -> Self {
+        let stretch_rows = collect_stretch_stripes(&props.rows);
+        let stretch_cols = collect_stretch_stripes(&props.cols);
 
-        for cell in props.cells.iter_mut() {
+        let mut grid = Self {
+            props,
+            stretch_rows,
+            stretch_cols,
+            min_size: Default::default(),
+        };
+
+        grid.calc_min_sizes();
+
+        sort_stretch_stripes(&grid.props.rows, &mut grid.stretch_rows);
+        sort_stretch_stripes(&grid.props.cols, &mut grid.stretch_cols);
+
+        grid
+    }
+
+    fn calc_min_sizes(&mut self) {
+        self.calc_cell_min_sizes();
+        self.calc_span_min_sizes();
+
+        self.min_size.width = span_size(&self.props.cols, self.props.col_spacing);
+        self.min_size.height = span_size(&self.props.rows, self.props.row_spacing);
+    }
+
+    fn calc_cell_min_sizes(&mut self) {
+        for cell in self.props.cells.iter_mut() {
             cell.min_size = cell.element.min_size();
         }
-        for (col_idx, col) in props.cols.iter_mut().enumerate() {
+        for col in self.props.cols.iter_mut() {
             col.min_size = col
                 .cells
                 .iter()
                 .filter_map(StripeCell::cell_idx)
-                .map(|idx| props.cells[idx].min_size.width)
+                .map(|idx| self.props.cells[idx].min_size.width)
                 .max()
                 .unwrap_or_default();
-            min_size.width += col.min_size;
-            if let SizingMode::Stretch = col.props.mode {
-                stretch_cols.push(col_idx);
-            }
         }
-        for (row_idx, row) in props.rows.iter_mut().enumerate() {
+        for row in self.props.rows.iter_mut() {
             row.min_size = row
                 .cells
                 .iter()
                 .filter_map(StripeCell::cell_idx)
-                .map(|idx| props.cells[idx].min_size.height)
+                .map(|idx| self.props.cells[idx].min_size.height)
                 .max()
                 .unwrap_or_default();
-            min_size.height += row.min_size;
-            if let SizingMode::Stretch = row.props.mode {
-                stretch_rows.push(row_idx);
-            }
-        }
-
-        stretch_rows
-            .sort_by(|lidx, ridx| props.rows[*ridx].min_size.cmp(&props.rows[*lidx].min_size));
-        stretch_cols
-            .sort_by(|lidx, ridx| props.cols[*ridx].min_size.cmp(&props.cols[*lidx].min_size));
-
-        Self {
-            props,
-            stretch_rows,
-            stretch_cols,
-            min_size,
         }
     }
 
-    fn calc_stripe_bounds(
-        total_size: i32,
-        stripes: &[Stripe],
-        stretch_stripes: &[usize],
-        spacing: i32,
-    ) -> Vec<(i32, i32)> {
-        let mut bounds = Vec::with_capacity(stripes.len());
+    fn calc_span_min_sizes(&mut self) {
+        for span in self.props.spans.iter_mut() {
+            span.min_size = span.element.min_size();
 
-        let mut stretch_budget = total_size - (stripes.len() - 1) as i32 * spacing;
-        for stripe in stripes.iter() {
-            match stripe.props.mode {
-                SizingMode::Stretch => (),
-                _ => stretch_budget -= stripe.min_size,
-            }
-            bounds.push((0, stripe.min_size));
+            let top = span.props.row;
+            let bottom = top + span.props.row_span;
+            let left = span.props.col;
+            let right = left + span.props.col_span;
+
+            adjust_span_stripes(
+                span.min_size.width,
+                &mut self.props.cols[left..right],
+                self.props.col_spacing,
+            );
+            adjust_span_stripes(
+                span.min_size.height,
+                &mut self.props.rows[top..bottom],
+                self.props.row_spacing,
+            );
         }
-        stretch_budget = std::cmp::max(0, stretch_budget);
+    }
+}
 
-        let mut stretch_count = stretch_stripes.len() as i32;
-        let mut stretch_unit = stretch_budget / stretch_count;
-        for &stripe_idx in stretch_stripes.iter() {
-            let stripe = &stripes[stripe_idx];
-
-            stretch_count -= 1;
-            let stripe_size = if stretch_count > 0 { stretch_unit } else { stretch_budget };
-
-            if stripe_size < stripe.min_size {
-                stretch_budget -= stripe.min_size;
-                if stretch_count > 0 {
-                    stretch_unit = stretch_budget / stretch_count;
+fn collect_stretch_stripes(stripes: &[Stripe]) -> Vec<usize> {
+    stripes
+        .iter()
+        .enumerate()
+        .filter_map(
+            |(idx, stripe)| {
+                if let SizingMode::Stretch = stripe.props.mode {
+                    Some(idx)
+                } else {
+                    None
                 }
-            } else {
-                stretch_budget -= stripe_size;
-                bounds[stripe_idx].1 = stretch_unit;
+            },
+        )
+        .collect()
+}
+
+fn sort_stretch_stripes(stripes: &[Stripe], stretch_stripes: &mut [usize]) {
+    stretch_stripes.sort_by(|lidx, ridx| stripes[*ridx].min_size.cmp(&stripes[*lidx].min_size));
+}
+
+fn span_size(stripes: &[Stripe], spacing: i32) -> i32 {
+    if stripes.len() == 0 {
+        return 0;
+    }
+
+    let mut size = stripes.iter().map(|stripe| stripe.min_size).sum();
+    size += (stripes.len() as i32 - 1) * spacing;
+    size
+}
+
+fn adjust_span_stripes(min_size: i32, stripes: &mut [Stripe], spacing: i32) {
+    let current_size = span_size(stripes, spacing);
+    if current_size >= min_size {
+        return;
+    }
+
+    let mut stretch_stripes = collect_stretch_stripes(stripes);
+    if stretch_stripes.len() > 0 {
+        sort_stretch_stripes(stripes, &mut stretch_stripes);
+        let bounds = calc_stripe_bounds(min_size, stripes, &stretch_stripes, spacing);
+        for idx in stretch_stripes {
+            stripes[idx].min_size = bounds[idx].1;
+        }
+    } else {
+        stripes[0].min_size += min_size - current_size;
+    }
+}
+
+fn calc_stripe_bounds(
+    total_size: i32,
+    stripes: &[Stripe],
+    stretch_stripes: &[usize],
+    spacing: i32,
+) -> Vec<(i32, i32)> {
+    let mut bounds = Vec::with_capacity(stripes.len());
+
+    let mut stretch_budget = total_size - (stripes.len() - 1) as i32 * spacing;
+    for stripe in stripes.iter() {
+        match stripe.props.mode {
+            SizingMode::Stretch => (),
+            _ => stretch_budget -= stripe.min_size,
+        }
+        bounds.push((0, stripe.min_size));
+    }
+    stretch_budget = std::cmp::max(0, stretch_budget);
+
+    let mut stretch_count = stretch_stripes.len() as i32;
+    let mut stretch_unit = stretch_budget / stretch_count;
+    for &stripe_idx in stretch_stripes.iter() {
+        let stripe = &stripes[stripe_idx];
+
+        stretch_count -= 1;
+        let stripe_size = if stretch_count > 0 { stretch_unit } else { stretch_budget };
+
+        if stripe_size < stripe.min_size {
+            stretch_budget -= stripe.min_size;
+            if stretch_count > 0 {
+                stretch_unit = stretch_budget / stretch_count;
             }
+        } else {
+            stretch_budget -= stripe_size;
+            bounds[stripe_idx].1 = stretch_unit;
         }
-
-        let mut start = 0;
-        for stripe_bounds in bounds.iter_mut() {
-            stripe_bounds.0 = start;
-            start += stripe_bounds.1 + spacing;
-        }
-
-        bounds
     }
 
-    fn calc_widget_bounds(
-        group_start: i32,
-        cell_start: i32,
-        cell_size: i32,
-        min_size: i32,
-        align: CellAlign,
-    ) -> (i32, i32) {
-        let widget_size = match align {
-            CellAlign::Stretch => cell_size,
-            _ => min_size,
+    let mut start = 0;
+    for stripe_bounds in bounds.iter_mut() {
+        stripe_bounds.0 = start;
+        start += stripe_bounds.1 + spacing;
+    }
+
+    bounds
+}
+
+fn calc_widget_bounds(
+    group_start: i32,
+    cell_start: i32,
+    cell_size: i32,
+    min_size: i32,
+    align: CellAlign,
+) -> (i32, i32) {
+    let widget_size = match align {
+        CellAlign::Stretch => cell_size,
+        _ => min_size,
+    };
+    let widget_start = group_start
+        + cell_start
+        + match align {
+            CellAlign::Start => 0,
+            CellAlign::Center => (cell_size - widget_size) / 2,
+            CellAlign::End => cell_size - widget_size,
+            CellAlign::Stretch => 0,
         };
-        let widget_start = group_start
-            + cell_start
-            + match align {
-                CellAlign::Start => 0,
-                CellAlign::Center => (cell_size - widget_size) / 2,
-                CellAlign::End => cell_size - widget_size,
-                CellAlign::Stretch => 0,
-            };
-        (widget_start, widget_size)
-    }
+    (widget_start, widget_size)
 }

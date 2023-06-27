@@ -1,7 +1,7 @@
 use fltk::group::Group;
 use fltk::prelude::*;
 
-use super::{Grid, GridProperties, Padding, StripeCell};
+use super::{Cell, Grid, GridProperties, Padding, StripeCell};
 
 mod cell;
 mod stripe;
@@ -24,6 +24,7 @@ impl GridBuilder {
                 row_spacing: 0,
                 col_spacing: 0,
                 cells: Vec::new(),
+                spans: Vec::new(),
                 rows: Vec::new(),
                 cols: Vec::new(),
             },
@@ -81,6 +82,60 @@ impl GridBuilder {
     }
 
     pub fn cell(&mut self) -> Option<CellBuilder> {
+        let (row, col) = self.next_free_cell()?;
+        Some(CellBuilder::new(self, row, col, 1, 1))
+    }
+
+    pub fn cell_at(&mut self, row: usize, col: usize) -> Option<CellBuilder> {
+        if (row >= self.props.rows.len()) && (col >= self.props.cols.len()) {
+            return None;
+        }
+        match self.props.rows[row].cells[col] {
+            StripeCell::Free | StripeCell::Skipped => Some(CellBuilder::new(self, row, col, 1, 1)),
+            _ => None,
+        }
+    }
+
+    pub fn span(&mut self, row_span: usize, col_span: usize) -> Option<CellBuilder> {
+        if (row_span == 0) || (col_span == 0) {
+            return None;
+        }
+
+        let (row, col) = self.next_free_cell()?;
+        if self.is_span_available(row, col, row_span, col_span, false) {
+            Some(CellBuilder::new(self, row, col, row_span, col_span))
+        } else {
+            None
+        }
+    }
+
+    pub fn span_at(
+        &mut self,
+        row: usize,
+        col: usize,
+        row_span: usize,
+        col_span: usize,
+    ) -> Option<CellBuilder> {
+        if (row_span == 0) || (col_span == 0) {
+            return None;
+        }
+
+        if (row >= self.props.rows.len()) && (col >= self.props.cols.len()) {
+            return None;
+        }
+        if self.is_span_available(row, col, row_span, col_span, true) {
+            Some(CellBuilder::new(self, row, col, row_span, col_span))
+        } else {
+            None
+        }
+    }
+
+    pub fn end(self) -> Grid {
+        self.props.group.end();
+        Grid::new(self.props)
+    }
+
+    fn next_free_cell(&mut self) -> Option<(usize, usize)> {
         let mut row = self.next_row;
         let mut col = self.next_col;
 
@@ -101,21 +156,66 @@ impl GridBuilder {
         self.next_row = row;
         self.next_col = col;
 
-        Some(CellBuilder::new(self, row, col))
+        Some((row, col))
     }
 
-    pub fn cell_at(&mut self, row: usize, col: usize) -> Option<CellBuilder> {
-        if (row >= self.props.rows.len()) && (col >= self.props.cols.len()) {
-            return None;
+    fn is_span_available(
+        &self,
+        row: usize,
+        col: usize,
+        row_span: usize,
+        col_span: usize,
+        allow_skipped: bool,
+    ) -> bool {
+        let top = row;
+        let bottom = top + row_span;
+        let left = col;
+        let right = left + col_span;
+
+        for cell_row in top..bottom {
+            for cell_col in left..right {
+                let cell_available = match self.props.rows[cell_row].cells[cell_col] {
+                    StripeCell::Free => true,
+                    StripeCell::Skipped if allow_skipped => true,
+                    _ => false,
+                };
+                if !cell_available {
+                    return false;
+                }
+            }
         }
-        match self.props.rows[row].cells[col] {
-            StripeCell::Free | StripeCell::Skipped => Some(CellBuilder::new(self, row, col)),
-            _ => None,
-        }
+
+        true
     }
 
-    pub fn end(self) -> Grid {
-        self.props.group.end();
-        Grid::new(self.props)
+    fn add_cell(&mut self, cell: Cell) {
+        if (cell.props.row_span > 1) || (cell.props.col_span > 1) {
+            return self.add_span(cell);
+        }
+
+        let row = cell.props.row;
+        let col = cell.props.col;
+
+        let cell_idx = self.props.cells.len();
+        self.props.cells.push(cell);
+
+        self.props.rows[row].cells[col] = StripeCell::Cell(cell_idx);
+        self.props.cols[col].cells[row] = StripeCell::Cell(cell_idx);
+    }
+
+    fn add_span(&mut self, span: Cell) {
+        let top = span.props.row;
+        let bottom = top + span.props.row_span;
+        let left = span.props.col;
+        let right = left + span.props.col_span;
+
+        self.props.spans.push(span);
+
+        for row in top..bottom {
+            for col in left..right {
+                self.props.rows[row].cells[col] = StripeCell::Span;
+                self.props.cols[col].cells[row] = StripeCell::Span;
+            }
+        }
     }
 }
