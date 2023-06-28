@@ -13,10 +13,6 @@ impl LayoutWidgetWrapper<InputChoice> for InputChoiceElement {
     fn wrap(widget: InputChoice) -> Self {
         Self { widget }
     }
-
-    fn widget(&self) -> InputChoice {
-        self.widget.clone()
-    }
 }
 
 impl LayoutElement for InputChoiceElement {

@@ -12,10 +12,6 @@ impl<I: InputExt + Clone> LayoutWidgetWrapper<I> for InputElement<I> {
     fn wrap(widget: I) -> Self {
         Self { widget }
     }
-
-    fn widget(&self) -> I {
-        self.widget.clone()
-    }
 }
 
 impl<I: InputExt + Clone> LayoutElement for InputElement<I> {
@@ -36,7 +32,7 @@ impl<I: InputExt + Clone> LayoutElement for InputElement<I> {
     }
 
     fn layout(&self, x: i32, y: i32, width: i32, height: i32) {
-        self.widget().resize(x, y, width, height)
+        self.widget.clone().resize(x, y, width, height)
     }
 }
 

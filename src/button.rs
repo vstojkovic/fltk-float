@@ -13,10 +13,6 @@ impl<B: ButtonExt + Clone> LayoutWidgetWrapper<B> for ButtonElement<B> {
     fn wrap(widget: B) -> Self {
         Self { widget }
     }
-
-    fn widget(&self) -> B {
-        self.widget.clone()
-    }
 }
 
 impl<B: ButtonExt + Clone> LayoutElement for ButtonElement<B> {
@@ -38,7 +34,7 @@ impl<B: ButtonExt + Clone> LayoutElement for ButtonElement<B> {
     }
 
     fn layout(&self, x: i32, y: i32, width: i32, height: i32) {
-        self.widget().resize(x, y, width, height)
+        self.widget.clone().resize(x, y, width, height)
     }
 }
 

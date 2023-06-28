@@ -1,6 +1,8 @@
 use fltk::group::Group;
 use fltk::prelude::*;
 
+use crate::WrapperFactory;
+
 use super::{LayoutElement, Size};
 
 mod builder;
@@ -105,6 +107,10 @@ impl LayoutElement for Grid {
 impl Grid {
     pub fn builder() -> GridBuilder {
         GridBuilder::new()
+    }
+
+    pub fn builder_with_factory(factory: WrapperFactory) -> GridBuilder {
+        GridBuilder::with_factory(factory)
     }
 
     pub fn group(&self) -> Group {

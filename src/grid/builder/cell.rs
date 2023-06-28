@@ -1,6 +1,6 @@
 use super::GridBuilder;
 use crate::grid::{Cell, CellAlign, CellProperties, Padding, StripeCell};
-use crate::{LayoutElement, LayoutWidgetWrapper};
+use crate::{IntoWidget, LayoutElement};
 
 pub struct CellBuilder<'l> {
     owner: &'l mut GridBuilder,
@@ -84,16 +84,20 @@ impl<'l> CellBuilder<'l> {
     }
 
     pub fn add<E: LayoutElement + 'static>(self, element: E) {
+        self.add_boxed(Box::new(element));
+    }
+
+    pub fn wrap<W: IntoWidget + 'static>(self, widget: W) -> W {
+        let element = self.owner.factory.wrap(widget.clone());
+        self.add_boxed(element);
+        widget
+    }
+
+    fn add_boxed(self, element: Box<dyn LayoutElement>) {
         self.owner.add_cell(Cell {
-            element: Box::new(element),
+            element,
             min_size: Default::default(),
             props: self.props,
         });
-    }
-
-    pub fn wrapped<W: Clone, L: LayoutWidgetWrapper<W> + 'static>(self, wrapper: L) -> W {
-        let widget = wrapper.widget();
-        self.add(wrapper);
-        widget
     }
 }

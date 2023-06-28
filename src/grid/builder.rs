@@ -1,6 +1,8 @@
 use fltk::group::Group;
 use fltk::prelude::*;
 
+use crate::WrapperFactory;
+
 use super::{Cell, Grid, GridProperties, Padding, StripeCell};
 
 mod cell;
@@ -11,6 +13,7 @@ pub use stripe::StripeBuilder;
 
 pub struct GridBuilder {
     props: GridProperties,
+    factory: WrapperFactory,
     default_cell_padding: Padding,
     next_row: usize,
     next_col: usize,
@@ -18,6 +21,10 @@ pub struct GridBuilder {
 
 impl GridBuilder {
     pub fn new() -> Self {
+        Self::with_factory(WrapperFactory::new())
+    }
+
+    pub fn with_factory(factory: WrapperFactory) -> Self {
         Self {
             props: GridProperties {
                 group: Group::default_fill(),
@@ -29,6 +36,7 @@ impl GridBuilder {
                 rows: Vec::new(),
                 cols: Vec::new(),
             },
+            factory,
             default_cell_padding: Default::default(),
             next_row: 0,
             next_col: 0,
