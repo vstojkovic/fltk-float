@@ -27,7 +27,7 @@ impl<I: InputExt + Clone> LayoutElement for InputElement<I> {
         let frame_height = frame_dy + frame_dh;
         Size {
             width: frame_width,
-            height: text_height + frame_height,
+            height: text_height + frame_height + 1,
         }
     }
 

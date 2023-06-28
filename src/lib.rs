@@ -9,6 +9,7 @@ pub mod frame;
 pub mod grid;
 pub mod input;
 pub mod misc;
+pub mod text;
 
 pub trait LayoutElement {
     fn min_size(&self) -> Size;

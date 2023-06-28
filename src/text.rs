@@ -1,33 +1,23 @@
 use std::ops::{Deref, DerefMut};
 
-use fltk::misc::InputChoice;
 use fltk::prelude::*;
 
-use super::{LayoutElement, LayoutWidgetWrapper, Size};
+use crate::{LayoutElement, LayoutWidgetWrapper, Size};
 
-pub struct InputChoiceElement {
-    widget: InputChoice,
+pub struct TextElement<T: DisplayExt + Clone> {
+    widget: T,
 }
 
-impl LayoutWidgetWrapper<InputChoice> for InputChoiceElement {
-    fn wrap(widget: InputChoice) -> Self {
+impl<T: DisplayExt + Clone> LayoutWidgetWrapper<T> for TextElement<T> {
+    fn wrap(widget: T) -> Self {
         Self { widget }
     }
 }
 
-impl LayoutElement for InputChoiceElement {
-    fn min_size(&self) -> Size {
+impl<T: DisplayExt + Clone> LayoutElement for TextElement<T> {
+    fn min_size(&self) -> crate::Size {
         fltk::draw::set_font(self.widget.text_font(), self.widget.text_size());
         let text_height = fltk::draw::height();
-        let text_width = self
-            .widget
-            .menu_button()
-            .into_iter()
-            .filter_map(|item| item.label())
-            .map(|label| fltk::draw::measure(&label, true).0)
-            .max()
-            .unwrap_or_default();
-
         let frame = self.widget.frame();
         let frame_dx = frame.dx();
         let frame_dy = frame.dy();
@@ -35,9 +25,8 @@ impl LayoutElement for InputChoiceElement {
         let frame_dh = frame.dh();
         let frame_width = frame_dx + frame_dw;
         let frame_height = frame_dy + frame_dh;
-
         Size {
-            width: 3 * frame_width + text_width + text_height,
+            width: frame_width,
             height: text_height + frame_height + 1,
         }
     }
@@ -47,14 +36,14 @@ impl LayoutElement for InputChoiceElement {
     }
 }
 
-impl Deref for InputChoiceElement {
-    type Target = InputChoice;
+impl<T: DisplayExt + Clone> Deref for TextElement<T> {
+    type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.widget
     }
 }
 
-impl DerefMut for InputChoiceElement {
+impl<T: DisplayExt + Clone> DerefMut for TextElement<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.widget
     }
