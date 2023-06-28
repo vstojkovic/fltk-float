@@ -346,7 +346,7 @@ fn calc_stripe_bounds(
     stretch_budget = std::cmp::max(0, stretch_budget);
 
     let mut stretch_count = stretch_stripes.len() as i32;
-    let mut stretch_unit = stretch_budget / stretch_count;
+    let mut stretch_unit = if stretch_count > 0 { stretch_budget / stretch_count } else { 0 };
     for &stripe_idx in stretch_stripes.iter() {
         let stripe = &stripes[stripe_idx];
 
