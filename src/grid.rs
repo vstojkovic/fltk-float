@@ -39,7 +39,7 @@ struct GridProperties {
     cols: Vec<Stripe>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 struct Padding {
     left: i32,
     top: i32,
@@ -58,6 +58,7 @@ struct CellProperties {
     col: usize,
     row_span: usize,
     col_span: usize,
+    padding: Padding,
     horz_align: CellAlign,
     vert_align: CellAlign,
 }
@@ -139,6 +140,8 @@ impl Grid {
                 cell_x,
                 cell_width,
                 cell.min_size.width,
+                cell.props.padding.left,
+                cell.props.padding.right,
                 cell.props.horz_align,
             );
             let (widget_y, widget_height) = calc_widget_bounds(
@@ -146,6 +149,8 @@ impl Grid {
                 cell_y,
                 cell_height,
                 cell.min_size.height,
+                cell.props.padding.top,
+                cell.props.padding.bottom,
                 cell.props.vert_align,
             );
             cell.element
@@ -168,6 +173,8 @@ impl Grid {
                 span_x,
                 span_width,
                 span.min_size.width,
+                span.props.padding.left,
+                span.props.padding.right,
                 span.props.horz_align,
             );
             let (widget_y, widget_height) = calc_widget_bounds(
@@ -175,6 +182,8 @@ impl Grid {
                 span_y,
                 span_height,
                 span.min_size.height,
+                span.props.padding.top,
+                span.props.padding.bottom,
                 span.props.vert_align,
             );
             span.element
@@ -193,7 +202,7 @@ impl Grid {
             min_size: Default::default(),
         };
 
-        grid.calc_min_sizes();
+        grid.cache_min_sizes();
 
         sort_stretch_stripes(&grid.props.rows, &mut grid.stretch_rows);
         sort_stretch_stripes(&grid.props.cols, &mut grid.stretch_cols);
@@ -201,17 +210,17 @@ impl Grid {
         grid
     }
 
-    fn calc_min_sizes(&mut self) {
-        self.calc_cell_min_sizes();
-        self.calc_span_min_sizes();
+    fn cache_min_sizes(&mut self) {
+        self.cache_cell_min_sizes();
+        self.cache_span_min_sizes();
 
         self.min_size.width = span_size(&self.props.cols, self.props.col_spacing);
         self.min_size.height = span_size(&self.props.rows, self.props.row_spacing);
     }
 
-    fn calc_cell_min_sizes(&mut self) {
+    fn cache_cell_min_sizes(&mut self) {
         for cell in self.props.cells.iter_mut() {
-            cell.min_size = cell.element.min_size();
+            cell.cache_min_size();
         }
         for col in self.props.cols.iter_mut() {
             col.min_size = col
@@ -233,9 +242,9 @@ impl Grid {
         }
     }
 
-    fn calc_span_min_sizes(&mut self) {
+    fn cache_span_min_sizes(&mut self) {
         for span in self.props.spans.iter_mut() {
-            span.min_size = span.element.min_size();
+            span.cache_min_size();
 
             let top = span.props.row;
             let bottom = top + span.props.row_span;
@@ -253,6 +262,14 @@ impl Grid {
                 self.props.row_spacing,
             );
         }
+    }
+}
+
+impl Cell {
+    fn cache_min_size(&mut self) {
+        self.min_size = self.element.min_size();
+        self.min_size.width += self.props.padding.left + self.props.padding.right;
+        self.min_size.height += self.props.padding.top + self.props.padding.bottom;
     }
 }
 
@@ -355,19 +372,25 @@ fn calc_widget_bounds(
     cell_start: i32,
     cell_size: i32,
     min_size: i32,
+    pad_start: i32,
+    pad_end: i32,
     align: CellAlign,
 ) -> (i32, i32) {
     let widget_size = match align {
         CellAlign::Stretch => cell_size,
         _ => min_size,
     };
-    let widget_start = group_start
-        + cell_start
-        + match align {
-            CellAlign::Start => 0,
-            CellAlign::Center => (cell_size - widget_size) / 2,
-            CellAlign::End => cell_size - widget_size,
-            CellAlign::Stretch => 0,
-        };
+
+    let widget_size = widget_size - pad_start - pad_end;
+    let cell_size = cell_size - pad_start - pad_end;
+
+    let widget_start = match align {
+        CellAlign::Start => 0,
+        CellAlign::Center => (cell_size - widget_size) / 2,
+        CellAlign::End => cell_size - widget_size,
+        CellAlign::Stretch => 0,
+    };
+    let widget_start = group_start + pad_start + cell_start + widget_start;
+
     (widget_start, widget_size)
 }

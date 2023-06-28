@@ -1,5 +1,5 @@
 use super::GridBuilder;
-use crate::grid::{Cell, CellAlign, CellProperties, StripeCell};
+use crate::grid::{Cell, CellAlign, CellProperties, Padding, StripeCell};
 use crate::{LayoutElement, LayoutWidgetWrapper};
 
 pub struct CellBuilder<'l> {
@@ -15,6 +15,7 @@ impl<'l> CellBuilder<'l> {
         row_span: usize,
         col_span: usize,
     ) -> Self {
+        let padding = owner.default_cell_padding;
         Self {
             owner,
             props: CellProperties {
@@ -22,10 +23,41 @@ impl<'l> CellBuilder<'l> {
                 col,
                 row_span,
                 col_span,
+                padding,
                 horz_align: CellAlign::Stretch,
                 vert_align: CellAlign::Center,
             },
         }
+    }
+
+    pub fn with_left_padding(mut self, padding: i32) -> Self {
+        self.props.padding.left = padding;
+        self
+    }
+
+    pub fn with_top_padding(mut self, padding: i32) -> Self {
+        self.props.padding.top = padding;
+        self
+    }
+
+    pub fn with_right_padding(mut self, padding: i32) -> Self {
+        self.props.padding.right = padding;
+        self
+    }
+
+    pub fn with_bottom_padding(mut self, padding: i32) -> Self {
+        self.props.padding.bottom = padding;
+        self
+    }
+
+    pub fn with_padding(mut self, left: i32, top: i32, right: i32, bottom: i32) -> Self {
+        self.props.padding = Padding {
+            left,
+            top,
+            right,
+            bottom,
+        };
+        self
     }
 
     pub fn with_horz_align(mut self, align: CellAlign) -> Self {

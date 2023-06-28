@@ -11,6 +11,7 @@ pub use stripe::StripeBuilder;
 
 pub struct GridBuilder {
     props: GridProperties,
+    default_cell_padding: Padding,
     next_row: usize,
     next_col: usize,
 }
@@ -28,6 +29,7 @@ impl GridBuilder {
                 rows: Vec::new(),
                 cols: Vec::new(),
             },
+            default_cell_padding: Default::default(),
             next_row: 0,
             next_col: 0,
         }
@@ -65,6 +67,22 @@ impl GridBuilder {
 
     pub fn with_padding(&mut self, left: i32, top: i32, right: i32, bottom: i32) -> &mut Self {
         self.props.padding = Padding {
+            left,
+            top,
+            right,
+            bottom,
+        };
+        self
+    }
+
+    pub fn with_default_cell_padding(
+        &mut self,
+        left: i32,
+        top: i32,
+        right: i32,
+        bottom: i32,
+    ) -> &mut Self {
+        self.default_cell_padding = Padding {
             left,
             top,
             right,
