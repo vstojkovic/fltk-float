@@ -1,15 +1,17 @@
+use std::borrow::Borrow;
+
 use super::GridBuilder;
 use crate::grid::{Cell, CellAlign, CellProperties, Padding, StripeCell};
-use crate::{IntoWidget, LayoutElement};
+use crate::{IntoWidget, LayoutElement, WrapperFactory};
 
-pub struct CellBuilder<'l> {
-    owner: &'l mut GridBuilder,
+pub struct CellBuilder<'l, F: Borrow<WrapperFactory>> {
+    owner: &'l mut GridBuilder<F>,
     props: CellProperties,
 }
 
-impl<'l> CellBuilder<'l> {
+impl<'l, F: Borrow<WrapperFactory>> CellBuilder<'l, F> {
     pub(super) fn new(
-        owner: &'l mut GridBuilder,
+        owner: &'l mut GridBuilder<F>,
         row: usize,
         col: usize,
         row_span: usize,
@@ -88,7 +90,7 @@ impl<'l> CellBuilder<'l> {
     }
 
     pub fn wrap<W: IntoWidget + 'static>(self, widget: W) -> W {
-        let element = self.owner.factory.wrap(widget.clone());
+        let element = self.owner.factory.borrow().wrap(widget.clone());
         self.add_boxed(element);
         widget
     }

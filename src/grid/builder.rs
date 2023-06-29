@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use fltk::group::Group;
 use fltk::prelude::*;
 
@@ -11,20 +13,22 @@ mod stripe;
 pub use cell::CellBuilder;
 pub use stripe::StripeBuilder;
 
-pub struct GridBuilder {
+pub struct GridBuilder<F: Borrow<WrapperFactory>> {
     props: GridProperties,
-    factory: WrapperFactory,
+    factory: F,
     default_cell_padding: Padding,
     next_row: usize,
     next_col: usize,
 }
 
-impl GridBuilder {
+impl GridBuilder<WrapperFactory> {
     pub fn new() -> Self {
         Self::with_factory(WrapperFactory::new())
     }
+}
 
-    pub fn with_factory(factory: WrapperFactory) -> Self {
+impl<F: Borrow<WrapperFactory>> GridBuilder<F> {
+    pub fn with_factory(factory: F) -> Self {
         Self {
             props: GridProperties {
                 group: Group::default_fill(),
@@ -99,20 +103,20 @@ impl GridBuilder {
         self
     }
 
-    pub fn row(&mut self) -> StripeBuilder {
+    pub fn row(&mut self) -> StripeBuilder<F> {
         StripeBuilder::new_row(self)
     }
 
-    pub fn col(&mut self) -> StripeBuilder {
+    pub fn col(&mut self) -> StripeBuilder<F> {
         StripeBuilder::new_col(self)
     }
 
-    pub fn cell(&mut self) -> Option<CellBuilder> {
+    pub fn cell(&mut self) -> Option<CellBuilder<F>> {
         let (row, col) = self.next_free_cell()?;
         Some(CellBuilder::new(self, row, col, 1, 1))
     }
 
-    pub fn cell_at(&mut self, row: usize, col: usize) -> Option<CellBuilder> {
+    pub fn cell_at(&mut self, row: usize, col: usize) -> Option<CellBuilder<F>> {
         if (row >= self.props.rows.len()) && (col >= self.props.cols.len()) {
             return None;
         }
@@ -122,7 +126,7 @@ impl GridBuilder {
         }
     }
 
-    pub fn span(&mut self, row_span: usize, col_span: usize) -> Option<CellBuilder> {
+    pub fn span(&mut self, row_span: usize, col_span: usize) -> Option<CellBuilder<F>> {
         if (row_span == 0) || (col_span == 0) {
             return None;
         }
@@ -141,7 +145,7 @@ impl GridBuilder {
         col: usize,
         row_span: usize,
         col_span: usize,
-    ) -> Option<CellBuilder> {
+    ) -> Option<CellBuilder<F>> {
         if (row_span == 0) || (col_span == 0) {
             return None;
         }

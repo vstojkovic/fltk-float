@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use fltk::group::Group;
 use fltk::prelude::*;
 
@@ -105,11 +107,11 @@ impl LayoutElement for Grid {
 }
 
 impl Grid {
-    pub fn builder() -> GridBuilder {
+    pub fn builder() -> GridBuilder<WrapperFactory> {
         GridBuilder::new()
     }
 
-    pub fn builder_with_factory(factory: WrapperFactory) -> GridBuilder {
+    pub fn builder_with_factory<F: Borrow<WrapperFactory>>(factory: F) -> GridBuilder<F> {
         GridBuilder::with_factory(factory)
     }
 

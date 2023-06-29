@@ -1,14 +1,17 @@
+use std::borrow::Borrow;
+
 use super::GridBuilder;
+use crate::WrapperFactory;
 use crate::grid::{SizingMode, Stripe, StripeCell, StripeProperties};
 
-pub struct StripeBuilder<'l> {
-    owner: &'l mut GridBuilder,
+pub struct StripeBuilder<'l, F: Borrow<WrapperFactory>> {
+    owner: &'l mut GridBuilder<F>,
     props: StripeProperties,
     adder: fn(Self),
 }
 
-impl<'l> StripeBuilder<'l> {
-    pub(super) fn new_row(owner: &'l mut GridBuilder) -> Self {
+impl<'l, F: Borrow<WrapperFactory>> StripeBuilder<'l, F> {
+    pub(super) fn new_row(owner: &'l mut GridBuilder<F>) -> Self {
         Self {
             owner,
             props: StripeProperties {
@@ -18,7 +21,7 @@ impl<'l> StripeBuilder<'l> {
         }
     }
 
-    pub(super) fn new_col(owner: &'l mut GridBuilder) -> Self {
+    pub(super) fn new_col(owner: &'l mut GridBuilder<F>) -> Self {
         Self {
             owner,
             props: StripeProperties {
