@@ -43,37 +43,37 @@ impl GridBuilder {
         }
     }
 
-    pub fn with_row_spacing(&mut self, spacing: i32) -> &mut Self {
+    pub fn with_row_spacing(mut self, spacing: i32) -> Self {
         self.props.row_spacing = std::cmp::max(0, spacing);
         self
     }
 
-    pub fn with_col_spacing(&mut self, spacing: i32) -> &mut Self {
+    pub fn with_col_spacing(mut self, spacing: i32) -> Self {
         self.props.col_spacing = std::cmp::max(0, spacing);
         self
     }
 
-    pub fn with_left_padding(&mut self, padding: i32) -> &mut Self {
+    pub fn with_left_padding(mut self, padding: i32) -> Self {
         self.props.padding.left = padding;
         self
     }
 
-    pub fn with_top_padding(&mut self, padding: i32) -> &mut Self {
+    pub fn with_top_padding(mut self, padding: i32) -> Self {
         self.props.padding.top = padding;
         self
     }
 
-    pub fn with_right_padding(&mut self, padding: i32) -> &mut Self {
+    pub fn with_right_padding(mut self, padding: i32) -> Self {
         self.props.padding.right = padding;
         self
     }
 
-    pub fn with_bottom_padding(&mut self, padding: i32) -> &mut Self {
+    pub fn with_bottom_padding(mut self, padding: i32) -> Self {
         self.props.padding.bottom = padding;
         self
     }
 
-    pub fn with_padding(&mut self, left: i32, top: i32, right: i32, bottom: i32) -> &mut Self {
+    pub fn with_padding(mut self, left: i32, top: i32, right: i32, bottom: i32) -> Self {
         self.props.padding = Padding {
             left,
             top,
@@ -84,12 +84,12 @@ impl GridBuilder {
     }
 
     pub fn with_default_cell_padding(
-        &mut self,
+        mut self,
         left: i32,
         top: i32,
         right: i32,
         bottom: i32,
-    ) -> &mut Self {
+    ) -> Self {
         self.default_cell_padding = Padding {
             left,
             top,
