@@ -1,8 +1,8 @@
 use std::borrow::Borrow;
 
 use super::GridBuilder;
-use crate::WrapperFactory;
 use crate::grid::{SizingMode, Stripe, StripeCell, StripeProperties};
+use crate::WrapperFactory;
 
 pub struct StripeBuilder<'l, F: Borrow<WrapperFactory>> {
     owner: &'l mut GridBuilder<F>,

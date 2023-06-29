@@ -222,8 +222,12 @@ impl Grid {
         self.cache_cell_min_sizes();
         self.cache_span_min_sizes();
 
-        self.min_size.width = span_size(&self.props.cols, self.props.col_spacing);
-        self.min_size.height = span_size(&self.props.rows, self.props.row_spacing);
+        self.min_size.width = span_size(&self.props.cols, self.props.col_spacing)
+            + self.props.padding.left
+            + self.props.padding.right;
+        self.min_size.height = span_size(&self.props.rows, self.props.row_spacing)
+            + self.props.padding.top
+            + self.props.padding.bottom;
     }
 
     fn cache_cell_min_sizes(&mut self) {
