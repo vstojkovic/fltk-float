@@ -25,15 +25,15 @@ pub enum CellAlign {
     Stretch,
 }
 
-pub struct Grid {
-    props: GridProperties,
+pub struct Grid<G: GroupExt + Clone = Group> {
+    props: GridProperties<G>,
     stretch_rows: Vec<usize>,
     stretch_cols: Vec<usize>,
     min_size: Size,
 }
 
-struct GridProperties {
-    group: Group,
+struct GridProperties<G: GroupExt + Clone = Group> {
+    group: G,
     padding: Padding,
     row_spacing: i32,
     col_spacing: i32,
@@ -95,7 +95,7 @@ impl StripeCell {
     }
 }
 
-impl LayoutElement for Grid {
+impl<G: GroupExt + Clone> LayoutElement for Grid<G> {
     fn min_size(&self) -> Size {
         self.min_size
     }
@@ -107,15 +107,17 @@ impl LayoutElement for Grid {
 }
 
 impl Grid {
-    pub fn builder() -> GridBuilder<WrapperFactory> {
-        GridBuilder::new()
+    pub fn builder() -> GridBuilder<Group, WrapperFactory> {
+        GridBuilder::new(Group::default_fill())
     }
 
-    pub fn builder_with_factory<F: Borrow<WrapperFactory>>(factory: F) -> GridBuilder<F> {
-        GridBuilder::with_factory(factory)
+    pub fn builder_with_factory<F: Borrow<WrapperFactory>>(factory: F) -> GridBuilder<Group, F> {
+        GridBuilder::with_factory(Group::default_fill(), factory)
     }
+}
 
-    pub fn group(&self) -> Group {
+impl<G: GroupExt + Clone> Grid<G> {
+    pub fn group(&self) -> G {
         self.props.group.clone()
     }
 
@@ -199,7 +201,7 @@ impl Grid {
         }
     }
 
-    fn new(props: GridProperties) -> Self {
+    fn new(props: GridProperties<G>) -> Self {
         let stretch_rows = collect_stretch_stripes(&props.rows);
         let stretch_cols = collect_stretch_stripes(&props.cols);
 

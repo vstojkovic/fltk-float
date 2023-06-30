@@ -58,6 +58,12 @@ impl<W: IntoWidget> LayoutWidgetWrapper<W> for SimpleWrapper {
             width: widget.width(),
             height: widget.height(),
         };
+        Self::new(widget, min_size)
+    }
+}
+
+impl SimpleWrapper {
+    pub fn new<W: IntoWidget>(widget: W, min_size: Size) -> Self {
         Self {
             widget: widget.into_widget(),
             min_size,

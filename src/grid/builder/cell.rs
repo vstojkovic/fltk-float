@@ -1,17 +1,19 @@
 use std::borrow::Borrow;
 
+use fltk::prelude::GroupExt;
+
 use super::GridBuilder;
 use crate::grid::{Cell, CellAlign, CellProperties, Padding, StripeCell};
 use crate::{IntoWidget, LayoutElement, WrapperFactory};
 
-pub struct CellBuilder<'l, F: Borrow<WrapperFactory>> {
-    owner: &'l mut GridBuilder<F>,
+pub struct CellBuilder<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> {
+    owner: &'l mut GridBuilder<G, F>,
     props: CellProperties,
 }
 
-impl<'l, F: Borrow<WrapperFactory>> CellBuilder<'l, F> {
+impl<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> CellBuilder<'l, G, F> {
     pub(super) fn new(
-        owner: &'l mut GridBuilder<F>,
+        owner: &'l mut GridBuilder<G, F>,
         row: usize,
         col: usize,
         row_span: usize,

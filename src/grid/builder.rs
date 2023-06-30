@@ -13,25 +13,25 @@ mod stripe;
 pub use cell::CellBuilder;
 pub use stripe::StripeBuilder;
 
-pub struct GridBuilder<F: Borrow<WrapperFactory>> {
-    props: GridProperties,
+pub struct GridBuilder<G: GroupExt + Clone = Group, F: Borrow<WrapperFactory> = WrapperFactory> {
+    props: GridProperties<G>,
     factory: F,
     default_cell_padding: Padding,
     next_row: usize,
     next_col: usize,
 }
 
-impl GridBuilder<WrapperFactory> {
-    pub fn new() -> Self {
-        Self::with_factory(WrapperFactory::new())
+impl<G: GroupExt + Clone> GridBuilder<G, WrapperFactory> {
+    pub fn new(group: G) -> Self {
+        Self::with_factory(group, WrapperFactory::new())
     }
 }
 
-impl<F: Borrow<WrapperFactory>> GridBuilder<F> {
-    pub fn with_factory(factory: F) -> Self {
+impl<G: GroupExt + Clone, F: Borrow<WrapperFactory>> GridBuilder<G, F> {
+    pub fn with_factory(group: G, factory: F) -> Self {
         Self {
             props: GridProperties {
-                group: Group::default_fill(),
+                group,
                 padding: Default::default(),
                 row_spacing: 0,
                 col_spacing: 0,
@@ -103,20 +103,20 @@ impl<F: Borrow<WrapperFactory>> GridBuilder<F> {
         self
     }
 
-    pub fn row(&mut self) -> StripeBuilder<F> {
+    pub fn row(&mut self) -> StripeBuilder<G, F> {
         StripeBuilder::new_row(self)
     }
 
-    pub fn col(&mut self) -> StripeBuilder<F> {
+    pub fn col(&mut self) -> StripeBuilder<G, F> {
         StripeBuilder::new_col(self)
     }
 
-    pub fn cell(&mut self) -> Option<CellBuilder<F>> {
+    pub fn cell(&mut self) -> Option<CellBuilder<G, F>> {
         let (row, col) = self.next_free_cell()?;
         Some(CellBuilder::new(self, row, col, 1, 1))
     }
 
-    pub fn cell_at(&mut self, row: usize, col: usize) -> Option<CellBuilder<F>> {
+    pub fn cell_at(&mut self, row: usize, col: usize) -> Option<CellBuilder<G, F>> {
         if (row >= self.props.rows.len()) && (col >= self.props.cols.len()) {
             return None;
         }
@@ -126,7 +126,7 @@ impl<F: Borrow<WrapperFactory>> GridBuilder<F> {
         }
     }
 
-    pub fn span(&mut self, row_span: usize, col_span: usize) -> Option<CellBuilder<F>> {
+    pub fn span(&mut self, row_span: usize, col_span: usize) -> Option<CellBuilder<G, F>> {
         if (row_span == 0) || (col_span == 0) {
             return None;
         }
@@ -145,7 +145,7 @@ impl<F: Borrow<WrapperFactory>> GridBuilder<F> {
         col: usize,
         row_span: usize,
         col_span: usize,
-    ) -> Option<CellBuilder<F>> {
+    ) -> Option<CellBuilder<G, F>> {
         if (row_span == 0) || (col_span == 0) {
             return None;
         }
@@ -160,7 +160,7 @@ impl<F: Borrow<WrapperFactory>> GridBuilder<F> {
         }
     }
 
-    pub fn end(self) -> Grid {
+    pub fn end(self) -> Grid<G> {
         self.props.group.end();
         Grid::new(self.props)
     }
