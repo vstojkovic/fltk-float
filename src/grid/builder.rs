@@ -202,6 +202,10 @@ impl<G: GroupExt + Clone, F: Borrow<WrapperFactory>> GridBuilder<G, F> {
         let left = col;
         let right = left + col_span;
 
+        if (bottom > self.props.rows.len()) || (right > self.props.cols.len()) {
+            return false;
+        }
+
         for cell_row in top..bottom {
             for cell_col in left..right {
                 let cell_available = match self.props.rows[cell_row].cells[cell_col] {
