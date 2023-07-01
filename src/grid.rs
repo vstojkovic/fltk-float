@@ -12,12 +12,6 @@ mod builder;
 pub use builder::{CellBuilder, GridBuilder, StripeBuilder};
 
 #[derive(Debug, Clone, Copy)]
-pub enum SizingMode {
-    Shrink,
-    Stretch,
-}
-
-#[derive(Debug, Clone, Copy)]
 pub enum CellAlign {
     Start,
     Center,
@@ -74,7 +68,7 @@ struct Stripe {
 }
 
 struct StripeProperties {
-    mode: SizingMode,
+    stretch: u8,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -293,7 +287,7 @@ fn collect_stretch_stripes(stripes: &[Stripe]) -> Vec<usize> {
         .enumerate()
         .filter_map(
             |(idx, stripe)| {
-                if let SizingMode::Stretch = stripe.props.mode {
+                if stripe.props.stretch > 0 {
                     Some(idx)
                 } else {
                     None
@@ -344,22 +338,24 @@ fn calc_stripe_bounds(
     let mut bounds = Vec::with_capacity(stripes.len());
 
     let mut stretch_budget = total_size - (stripes.len() - 1) as i32 * spacing;
+    let mut stretch_count: i32 = 0;
     for stripe in stripes.iter() {
-        match stripe.props.mode {
-            SizingMode::Stretch => (),
-            _ => stretch_budget -= stripe.min_size,
+        if stripe.props.stretch == 0 {
+            stretch_budget -= stripe.min_size;
+        } else {
+            stretch_count += stripe.props.stretch as i32;
         }
         bounds.push((0, stripe.min_size));
     }
     stretch_budget = std::cmp::max(0, stretch_budget);
 
-    let mut stretch_count = stretch_stripes.len() as i32;
     let mut stretch_unit = if stretch_count > 0 { stretch_budget / stretch_count } else { 0 };
     for &stripe_idx in stretch_stripes.iter() {
         let stripe = &stripes[stripe_idx];
 
-        stretch_count -= 1;
-        let stripe_size = if stretch_count > 0 { stretch_unit } else { stretch_budget };
+        let factor = stripe.props.stretch as i32;
+        stretch_count -= factor;
+        let stripe_size = if stretch_count > 0 { stretch_unit * factor } else { stretch_budget };
 
         if stripe_size < stripe.min_size {
             stretch_budget -= stripe.min_size;
@@ -368,7 +364,7 @@ fn calc_stripe_bounds(
             }
         } else {
             stretch_budget -= stripe_size;
-            bounds[stripe_idx].1 = stretch_unit;
+            bounds[stripe_idx].1 = stripe_size;
         }
     }
 

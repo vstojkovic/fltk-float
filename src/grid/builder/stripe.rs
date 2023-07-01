@@ -3,7 +3,7 @@ use std::borrow::Borrow;
 use fltk::prelude::GroupExt;
 
 use super::GridBuilder;
-use crate::grid::{SizingMode, Stripe, StripeCell, StripeProperties};
+use crate::grid::{Stripe, StripeCell, StripeProperties};
 use crate::WrapperFactory;
 
 pub struct StripeBuilder<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> {
@@ -16,9 +16,7 @@ impl<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> StripeBuilder<'l, G, F>
     pub(super) fn new_row(owner: &'l mut GridBuilder<G, F>) -> Self {
         Self {
             owner,
-            props: StripeProperties {
-                mode: SizingMode::Shrink,
-            },
+            props: StripeProperties { stretch: 0 },
             adder: Self::add_to_rows,
         }
     }
@@ -26,15 +24,13 @@ impl<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> StripeBuilder<'l, G, F>
     pub(super) fn new_col(owner: &'l mut GridBuilder<G, F>) -> Self {
         Self {
             owner,
-            props: StripeProperties {
-                mode: SizingMode::Shrink,
-            },
+            props: StripeProperties { stretch: 0 },
             adder: Self::add_to_cols,
         }
     }
 
-    pub fn with_mode(mut self, mode: SizingMode) -> Self {
-        self.props.mode = mode;
+    pub fn with_stretch(mut self, stretch: u8) -> Self {
+        self.props.stretch = stretch;
         self
     }
 
