@@ -67,6 +67,7 @@ struct Stripe {
     props: StripeProperties,
 }
 
+#[derive(Debug, Clone, Copy)]
 struct StripeProperties {
     stretch: u8,
 }
