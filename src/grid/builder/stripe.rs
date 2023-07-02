@@ -3,12 +3,13 @@ use std::borrow::Borrow;
 use fltk::prelude::GroupExt;
 
 use super::GridBuilder;
-use crate::grid::{Stripe, StripeCell, StripeProperties};
+use crate::grid::{Stripe, StripeCell, StripeProperties, CellAlign};
 use crate::WrapperFactory;
 
 pub struct StripeBuilder<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> {
     owner: &'l mut GridBuilder<G, F>,
     props: StripeProperties,
+    default_align: CellAlign,
     adder: fn(Self, usize),
 }
 
@@ -17,6 +18,7 @@ impl<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> StripeBuilder<'l, G, F>
         Self {
             owner,
             props: StripeProperties { stretch: 0 },
+            default_align: CellAlign::Center,
             adder: Self::add_to_rows,
         }
     }
@@ -25,12 +27,18 @@ impl<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> StripeBuilder<'l, G, F>
         Self {
             owner,
             props: StripeProperties { stretch: 0 },
+            default_align: CellAlign::Stretch,
             adder: Self::add_to_cols,
         }
     }
 
     pub fn with_stretch(mut self, stretch: u8) -> Self {
         self.props.stretch = stretch;
+        self
+    }
+
+    pub fn with_default_align(mut self, align: CellAlign) -> Self {
+        self.default_align = align;
         self
     }
 
@@ -49,6 +57,7 @@ impl<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> StripeBuilder<'l, G, F>
                 min_size: 0,
                 props: self.props,
             });
+            self.owner.default_row_align.push(self.default_align);
             for col in self.owner.props.cols.iter_mut() {
                 col.cells.push(StripeCell::Free);
             }
@@ -62,6 +71,7 @@ impl<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> StripeBuilder<'l, G, F>
                 min_size: 0,
                 props: self.props,
             });
+            self.owner.default_col_align.push(self.default_align);
             for row in self.owner.props.rows.iter_mut() {
                 row.cells.push(StripeCell::Free);
             }

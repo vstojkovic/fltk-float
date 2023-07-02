@@ -5,7 +5,7 @@ use fltk::prelude::*;
 
 use crate::WrapperFactory;
 
-use super::{Cell, Grid, GridProperties, Padding, StripeCell};
+use super::{Cell, Grid, GridProperties, Padding, StripeCell, CellAlign};
 
 mod cell;
 mod stripe;
@@ -17,6 +17,8 @@ pub struct GridBuilder<G: GroupExt + Clone = Group, F: Borrow<WrapperFactory> = 
     props: GridProperties<G>,
     factory: F,
     default_cell_padding: Padding,
+    default_row_align: Vec<CellAlign>,
+    default_col_align: Vec<CellAlign>,
     next_row: usize,
     next_col: usize,
 }
@@ -42,6 +44,8 @@ impl<G: GroupExt + Clone, F: Borrow<WrapperFactory>> GridBuilder<G, F> {
             },
             factory,
             default_cell_padding: Default::default(),
+            default_row_align: Vec::new(),
+            default_col_align: Vec::new(),
             next_row: 0,
             next_col: 0,
         }

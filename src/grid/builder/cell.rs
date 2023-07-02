@@ -20,6 +20,8 @@ impl<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> CellBuilder<'l, G, F> {
         col_span: usize,
     ) -> Self {
         let padding = owner.default_cell_padding;
+        let horz_align = owner.default_col_align[col];
+        let vert_align = owner.default_row_align[row];
         Self {
             owner,
             props: CellProperties {
@@ -28,8 +30,8 @@ impl<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> CellBuilder<'l, G, F> {
                 row_span,
                 col_span,
                 padding,
-                horz_align: CellAlign::Stretch,
-                vert_align: CellAlign::Center,
+                horz_align,
+                vert_align,
             },
         }
     }
