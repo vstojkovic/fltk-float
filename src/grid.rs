@@ -33,6 +33,7 @@ struct GridProperties<G: GroupExt + Clone = Group> {
     col_spacing: i32,
     cells: Vec<Cell>,
     spans: Vec<Cell>,
+    groups: Vec<StripeGroup>,
     rows: Vec<Stripe>,
     cols: Vec<Stripe>,
 }
@@ -61,15 +62,19 @@ struct CellProperties {
     vert_align: CellAlign,
 }
 
-struct Stripe {
-    cells: Vec<StripeCell>,
-    min_size: i32,
+struct StripeGroup {
     props: StripeProperties,
+    min_size: i32,
 }
 
 #[derive(Debug, Clone, Copy)]
 struct StripeProperties {
     stretch: u8,
+}
+
+struct Stripe {
+    cells: Vec<StripeCell>,
+    group_idx: usize,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -127,12 +132,14 @@ impl<G: GroupExt + Clone> Grid<G> {
         let col_bounds = calc_stripe_bounds(
             width,
             &self.props.cols,
+            &self.props.groups,
             &self.stretch_cols,
             self.props.col_spacing,
         );
         let row_bounds = calc_stripe_bounds(
             height,
             &self.props.rows,
+            &self.props.groups,
             &self.stretch_rows,
             self.props.row_spacing,
         );
@@ -197,8 +204,8 @@ impl<G: GroupExt + Clone> Grid<G> {
     }
 
     fn new(props: GridProperties<G>) -> Self {
-        let stretch_rows = collect_stretch_stripes(&props.rows);
-        let stretch_cols = collect_stretch_stripes(&props.cols);
+        let stretch_rows = collect_stretch_stripes(&props.rows, &props.groups);
+        let stretch_cols = collect_stretch_stripes(&props.cols, &props.groups);
 
         let mut grid = Self {
             props,
@@ -209,8 +216,8 @@ impl<G: GroupExt + Clone> Grid<G> {
 
         grid.cache_min_sizes();
 
-        sort_stretch_stripes(&grid.props.rows, &mut grid.stretch_rows);
-        sort_stretch_stripes(&grid.props.cols, &mut grid.stretch_cols);
+        sort_stretch_stripes(&grid.props.rows, &grid.props.groups, &mut grid.stretch_rows);
+        sort_stretch_stripes(&grid.props.cols, &grid.props.groups, &mut grid.stretch_cols);
 
         grid
     }
@@ -219,35 +226,38 @@ impl<G: GroupExt + Clone> Grid<G> {
         self.cache_cell_min_sizes();
         self.cache_span_min_sizes();
 
-        self.min_size.width = span_size(&self.props.cols, self.props.col_spacing)
-            + self.props.padding.left
-            + self.props.padding.right;
-        self.min_size.height = span_size(&self.props.rows, self.props.row_spacing)
-            + self.props.padding.top
-            + self.props.padding.bottom;
+        self.min_size.width =
+            span_size(&self.props.cols, &self.props.groups, self.props.col_spacing)
+                + self.props.padding.left
+                + self.props.padding.right;
+        self.min_size.height =
+            span_size(&self.props.rows, &self.props.groups, self.props.row_spacing)
+                + self.props.padding.top
+                + self.props.padding.bottom;
     }
 
     fn cache_cell_min_sizes(&mut self) {
         for cell in self.props.cells.iter_mut() {
             cell.cache_min_size();
         }
+        for group in self.props.groups.iter_mut() {
+            group.min_size = 0;
+        }
         for col in self.props.cols.iter_mut() {
-            col.min_size = col
+            self.props.groups[col.group_idx].min_size = col
                 .cells
                 .iter()
                 .filter_map(StripeCell::cell_idx)
                 .map(|idx| self.props.cells[idx].min_size.width)
-                .max()
-                .unwrap_or_default();
+                .fold(self.props.groups[col.group_idx].min_size, std::cmp::max);
         }
         for row in self.props.rows.iter_mut() {
-            row.min_size = row
+            self.props.groups[row.group_idx].min_size = row
                 .cells
                 .iter()
                 .filter_map(StripeCell::cell_idx)
                 .map(|idx| self.props.cells[idx].min_size.height)
-                .max()
-                .unwrap_or_default();
+                .fold(self.props.groups[row.group_idx].min_size, std::cmp::max);
         }
     }
 
@@ -262,12 +272,14 @@ impl<G: GroupExt + Clone> Grid<G> {
 
             adjust_span_stripes(
                 span.min_size.width,
-                &mut self.props.cols[left..right],
+                &self.props.cols[left..right],
+                &mut self.props.groups,
                 self.props.col_spacing,
             );
             adjust_span_stripes(
                 span.min_size.height,
-                &mut self.props.rows[top..bottom],
+                &self.props.rows[top..bottom],
+                &mut self.props.groups,
                 self.props.row_spacing,
             );
         }
@@ -282,13 +294,13 @@ impl Cell {
     }
 }
 
-fn collect_stretch_stripes(stripes: &[Stripe]) -> Vec<usize> {
+fn collect_stretch_stripes(stripes: &[Stripe], groups: &[StripeGroup]) -> Vec<usize> {
     stripes
         .iter()
         .enumerate()
         .filter_map(
             |(idx, stripe)| {
-                if stripe.props.stretch > 0 {
+                if groups[stripe.group_idx].props.stretch > 0 {
                     Some(idx)
                 } else {
                     None
@@ -298,41 +310,54 @@ fn collect_stretch_stripes(stripes: &[Stripe]) -> Vec<usize> {
         .collect()
 }
 
-fn sort_stretch_stripes(stripes: &[Stripe], stretch_stripes: &mut [usize]) {
-    stretch_stripes.sort_by(|lidx, ridx| stripes[*ridx].min_size.cmp(&stripes[*lidx].min_size));
+fn sort_stretch_stripes(stripes: &[Stripe], groups: &[StripeGroup], stretch_stripes: &mut [usize]) {
+    stretch_stripes.sort_by(|lidx, ridx| {
+        groups[stripes[*ridx].group_idx]
+            .min_size
+            .cmp(&groups[stripes[*lidx].group_idx].min_size)
+    });
 }
 
-fn span_size(stripes: &[Stripe], spacing: i32) -> i32 {
+fn span_size(stripes: &[Stripe], groups: &[StripeGroup], spacing: i32) -> i32 {
     if stripes.len() == 0 {
         return 0;
     }
 
-    let mut size = stripes.iter().map(|stripe| stripe.min_size).sum();
+    let mut size = stripes
+        .iter()
+        .map(|stripe| groups[stripe.group_idx].min_size)
+        .sum();
     size += (stripes.len() as i32 - 1) * spacing;
     size
 }
 
-fn adjust_span_stripes(min_size: i32, stripes: &mut [Stripe], spacing: i32) {
-    let current_size = span_size(stripes, spacing);
+fn adjust_span_stripes(
+    min_size: i32,
+    stripes: &[Stripe],
+    groups: &mut [StripeGroup],
+    spacing: i32,
+) {
+    let current_size = span_size(stripes, groups, spacing);
     if current_size >= min_size {
         return;
     }
 
-    let mut stretch_stripes = collect_stretch_stripes(stripes);
+    let mut stretch_stripes = collect_stretch_stripes(stripes, groups);
     if stretch_stripes.len() > 0 {
-        sort_stretch_stripes(stripes, &mut stretch_stripes);
-        let bounds = calc_stripe_bounds(min_size, stripes, &stretch_stripes, spacing);
+        sort_stretch_stripes(stripes, groups, &mut stretch_stripes);
+        let bounds = calc_stripe_bounds(min_size, stripes, groups, &stretch_stripes, spacing);
         for idx in stretch_stripes {
-            stripes[idx].min_size = bounds[idx].1;
+            groups[stripes[idx].group_idx].min_size = bounds[idx].1;
         }
     } else {
-        stripes[0].min_size += min_size - current_size;
+        groups[stripes[0].group_idx].min_size += min_size - current_size;
     }
 }
 
 fn calc_stripe_bounds(
     total_size: i32,
     stripes: &[Stripe],
+    groups: &[StripeGroup],
     stretch_stripes: &[usize],
     spacing: i32,
 ) -> Vec<(i32, i32)> {
@@ -341,25 +366,27 @@ fn calc_stripe_bounds(
     let mut stretch_budget = total_size - (stripes.len() - 1) as i32 * spacing;
     let mut stretch_count: i32 = 0;
     for stripe in stripes.iter() {
-        if stripe.props.stretch == 0 {
-            stretch_budget -= stripe.min_size;
+        let group = &groups[stripe.group_idx];
+        if group.props.stretch == 0 {
+            stretch_budget -= group.min_size;
         } else {
-            stretch_count += stripe.props.stretch as i32;
+            stretch_count += group.props.stretch as i32;
         }
-        bounds.push((0, stripe.min_size));
+        bounds.push((0, group.min_size));
     }
     stretch_budget = std::cmp::max(0, stretch_budget);
 
     let mut stretch_unit = if stretch_count > 0 { stretch_budget / stretch_count } else { 0 };
     for &stripe_idx in stretch_stripes.iter() {
         let stripe = &stripes[stripe_idx];
+        let group = &groups[stripe.group_idx];
 
-        let factor = stripe.props.stretch as i32;
+        let factor = group.props.stretch as i32;
         stretch_count -= factor;
         let stripe_size = if stretch_count > 0 { stretch_unit * factor } else { stretch_budget };
 
-        if stripe_size < stripe.min_size {
-            stretch_budget -= stripe.min_size;
+        if stripe_size < group.min_size {
+            stretch_budget -= group.min_size;
             if stretch_count > 0 {
                 stretch_unit = stretch_budget / stretch_count;
             }

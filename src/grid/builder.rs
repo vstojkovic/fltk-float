@@ -5,9 +5,12 @@ use fltk::prelude::*;
 
 use crate::WrapperFactory;
 
-use super::{Cell, Grid, GridProperties, Padding, StripeCell, CellAlign};
+use self::group::StripeGroupBuilder;
+
+use super::{Cell, CellAlign, Grid, GridProperties, Padding, StripeCell};
 
 mod cell;
+mod group;
 mod stripe;
 
 pub use cell::CellBuilder;
@@ -21,6 +24,16 @@ pub struct GridBuilder<G: GroupExt + Clone = Group, F: Borrow<WrapperFactory> = 
     default_col_align: Vec<CellAlign>,
     next_row: usize,
     next_col: usize,
+}
+
+pub struct StripeGroupRef {
+    kind: StripeKind,
+    idx: usize,
+}
+
+enum StripeKind {
+    Row,
+    Column,
 }
 
 impl<G: GroupExt + Clone> GridBuilder<G, WrapperFactory> {
@@ -39,6 +52,7 @@ impl<G: GroupExt + Clone, F: Borrow<WrapperFactory>> GridBuilder<G, F> {
                 col_spacing: 0,
                 cells: Vec::new(),
                 spans: Vec::new(),
+                groups: Vec::new(),
                 rows: Vec::new(),
                 cols: Vec::new(),
             },
@@ -108,11 +122,23 @@ impl<G: GroupExt + Clone, F: Borrow<WrapperFactory>> GridBuilder<G, F> {
     }
 
     pub fn row(&mut self) -> StripeBuilder<G, F> {
-        StripeBuilder::new_row(self)
+        StripeBuilder::new(self, StripeKind::Row, None)
     }
 
     pub fn col(&mut self) -> StripeBuilder<G, F> {
-        StripeBuilder::new_col(self)
+        StripeBuilder::new(self, StripeKind::Column, None)
+    }
+
+    pub fn row_group(&mut self) -> StripeGroupBuilder<G, F> {
+        StripeGroupBuilder::new(self, StripeKind::Row)
+    }
+
+    pub fn col_group(&mut self) -> StripeGroupBuilder<G, F> {
+        StripeGroupBuilder::new(self, StripeKind::Column)
+    }
+
+    pub fn extend_group(&mut self, group: StripeGroupRef) -> StripeBuilder<G, F> {
+        StripeBuilder::new(self, group.kind, Some(group.idx))
     }
 
     pub fn cell(&mut self) -> Option<CellBuilder<G, F>> {

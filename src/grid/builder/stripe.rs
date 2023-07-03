@@ -2,33 +2,34 @@ use std::borrow::Borrow;
 
 use fltk::prelude::GroupExt;
 
-use super::GridBuilder;
-use crate::grid::{Stripe, StripeCell, StripeProperties, CellAlign};
+use super::{GridBuilder, StripeKind};
+use crate::grid::{CellAlign, Stripe, StripeCell, StripeGroup, StripeProperties};
 use crate::WrapperFactory;
 
 pub struct StripeBuilder<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> {
     owner: &'l mut GridBuilder<G, F>,
+    kind: StripeKind,
     props: StripeProperties,
+    group_idx: Option<usize>,
     default_align: CellAlign,
-    adder: fn(Self, usize),
 }
 
 impl<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> StripeBuilder<'l, G, F> {
-    pub(super) fn new_row(owner: &'l mut GridBuilder<G, F>) -> Self {
+    pub(super) fn new(
+        owner: &'l mut GridBuilder<G, F>,
+        kind: StripeKind,
+        group_idx: Option<usize>,
+    ) -> Self {
+        let default_align = match kind {
+            StripeKind::Row => CellAlign::Center,
+            StripeKind::Column => CellAlign::Stretch,
+        };
         Self {
             owner,
+            kind,
             props: StripeProperties { stretch: 0 },
-            default_align: CellAlign::Center,
-            adder: Self::add_to_rows,
-        }
-    }
-
-    pub(super) fn new_col(owner: &'l mut GridBuilder<G, F>) -> Self {
-        Self {
-            owner,
-            props: StripeProperties { stretch: 0 },
-            default_align: CellAlign::Stretch,
-            adder: Self::add_to_cols,
+            group_idx,
+            default_align,
         }
     }
 
@@ -43,37 +44,42 @@ impl<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> StripeBuilder<'l, G, F>
     }
 
     pub fn add(self) {
-        (self.adder)(self, 1);
+        self.add_to_owner(1);
     }
 
     pub fn batch(self, count: usize) {
-        (self.adder)(self, count);
+        self.add_to_owner(count);
     }
 
-    fn add_to_rows(self, count: usize) {
+    fn add_to_owner(self, count: usize) {
+        let (stripes, default_aligns, perpendicular) = match self.kind {
+            StripeKind::Row => (
+                &mut self.owner.props.rows,
+                &mut self.owner.default_row_align,
+                &mut self.owner.props.cols,
+            ),
+            StripeKind::Column => (
+                &mut self.owner.props.cols,
+                &mut self.owner.default_col_align,
+                &mut self.owner.props.rows,
+            ),
+        };
         for _ in 0..count {
-            self.owner.props.rows.push(Stripe {
-                cells: vec![StripeCell::Free; self.owner.props.cols.len()],
-                min_size: 0,
-                props: self.props,
+            let group_idx = self.group_idx.unwrap_or_else(|| {
+                let idx = self.owner.props.groups.len();
+                self.owner.props.groups.push(StripeGroup {
+                    props: self.props,
+                    min_size: 0,
+                });
+                idx
             });
-            self.owner.default_row_align.push(self.default_align);
-            for col in self.owner.props.cols.iter_mut() {
-                col.cells.push(StripeCell::Free);
-            }
-        }
-    }
-
-    fn add_to_cols(self, count: usize) {
-        for _ in 0..count {
-            self.owner.props.cols.push(Stripe {
-                cells: vec![StripeCell::Free; self.owner.props.rows.len()],
-                min_size: 0,
-                props: self.props,
+            stripes.push(Stripe {
+                cells: vec![StripeCell::Free; perpendicular.len()],
+                group_idx,
             });
-            self.owner.default_col_align.push(self.default_align);
-            for row in self.owner.props.rows.iter_mut() {
-                row.cells.push(StripeCell::Free);
+            default_aligns.push(self.default_align);
+            for perp in perpendicular.iter_mut() {
+                perp.cells.push(StripeCell::Free);
             }
         }
     }
