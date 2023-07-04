@@ -33,7 +33,7 @@ struct GridProperties<G: GroupExt + Clone = Group> {
     col_spacing: i32,
     cells: Vec<Cell>,
     spans: Vec<Cell>,
-    groups: Vec<StripeGroup>,
+    groups: Vec<StripeProperties>,
     rows: Vec<Stripe>,
     cols: Vec<Stripe>,
 }
@@ -62,14 +62,10 @@ struct CellProperties {
     vert_align: CellAlign,
 }
 
-struct StripeGroup {
-    props: StripeProperties,
-    min_size: i32,
-}
-
 #[derive(Debug, Clone, Copy)]
 struct StripeProperties {
     stretch: u8,
+    min_size: i32,
 }
 
 struct Stripe {
@@ -240,9 +236,6 @@ impl<G: GroupExt + Clone> Grid<G> {
         for cell in self.props.cells.iter_mut() {
             cell.cache_min_size();
         }
-        for group in self.props.groups.iter_mut() {
-            group.min_size = 0;
-        }
         for col in self.props.cols.iter_mut() {
             self.props.groups[col.group_idx].min_size = col
                 .cells
@@ -294,13 +287,13 @@ impl Cell {
     }
 }
 
-fn collect_stretch_stripes(stripes: &[Stripe], groups: &[StripeGroup]) -> Vec<usize> {
+fn collect_stretch_stripes(stripes: &[Stripe], groups: &[StripeProperties]) -> Vec<usize> {
     stripes
         .iter()
         .enumerate()
         .filter_map(
             |(idx, stripe)| {
-                if groups[stripe.group_idx].props.stretch > 0 {
+                if groups[stripe.group_idx].stretch > 0 {
                     Some(idx)
                 } else {
                     None
@@ -310,7 +303,11 @@ fn collect_stretch_stripes(stripes: &[Stripe], groups: &[StripeGroup]) -> Vec<us
         .collect()
 }
 
-fn sort_stretch_stripes(stripes: &[Stripe], groups: &[StripeGroup], stretch_stripes: &mut [usize]) {
+fn sort_stretch_stripes(
+    stripes: &[Stripe],
+    groups: &[StripeProperties],
+    stretch_stripes: &mut [usize],
+) {
     stretch_stripes.sort_by(|lidx, ridx| {
         groups[stripes[*ridx].group_idx]
             .min_size
@@ -318,7 +315,7 @@ fn sort_stretch_stripes(stripes: &[Stripe], groups: &[StripeGroup], stretch_stri
     });
 }
 
-fn span_size(stripes: &[Stripe], groups: &[StripeGroup], spacing: i32) -> i32 {
+fn span_size(stripes: &[Stripe], groups: &[StripeProperties], spacing: i32) -> i32 {
     if stripes.len() == 0 {
         return 0;
     }
@@ -334,7 +331,7 @@ fn span_size(stripes: &[Stripe], groups: &[StripeGroup], spacing: i32) -> i32 {
 fn adjust_span_stripes(
     min_size: i32,
     stripes: &[Stripe],
-    groups: &mut [StripeGroup],
+    groups: &mut [StripeProperties],
     spacing: i32,
 ) {
     let current_size = span_size(stripes, groups, spacing);
@@ -357,7 +354,7 @@ fn adjust_span_stripes(
 fn calc_stripe_bounds(
     total_size: i32,
     stripes: &[Stripe],
-    groups: &[StripeGroup],
+    groups: &[StripeProperties],
     stretch_stripes: &[usize],
     spacing: i32,
 ) -> Vec<(i32, i32)> {
@@ -367,10 +364,10 @@ fn calc_stripe_bounds(
     let mut stretch_count: i32 = 0;
     for stripe in stripes.iter() {
         let group = &groups[stripe.group_idx];
-        if group.props.stretch == 0 {
+        if group.stretch == 0 {
             stretch_budget -= group.min_size;
         } else {
-            stretch_count += group.props.stretch as i32;
+            stretch_count += group.stretch as i32;
         }
         bounds.push((0, group.min_size));
     }
@@ -381,7 +378,7 @@ fn calc_stripe_bounds(
         let stripe = &stripes[stripe_idx];
         let group = &groups[stripe.group_idx];
 
-        let factor = group.props.stretch as i32;
+        let factor = group.stretch as i32;
         stretch_count -= factor;
         let stripe_size = if stretch_count > 0 { stretch_unit * factor } else { stretch_budget };
 

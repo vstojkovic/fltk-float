@@ -3,7 +3,7 @@ use std::borrow::Borrow;
 use fltk::prelude::GroupExt;
 
 use super::{GridBuilder, StripeKind};
-use crate::grid::{CellAlign, Stripe, StripeCell, StripeGroup, StripeProperties};
+use crate::grid::{CellAlign, Stripe, StripeCell, StripeProperties};
 use crate::WrapperFactory;
 
 pub struct StripeBuilder<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> {
@@ -27,7 +27,10 @@ impl<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> StripeBuilder<'l, G, F>
         Self {
             owner,
             kind,
-            props: StripeProperties { stretch: 0 },
+            props: StripeProperties {
+                stretch: 0,
+                min_size: 0,
+            },
             group_idx,
             default_align,
         }
@@ -35,6 +38,11 @@ impl<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> StripeBuilder<'l, G, F>
 
     pub fn with_stretch(mut self, stretch: u8) -> Self {
         self.props.stretch = stretch;
+        self
+    }
+
+    pub fn with_min_size(mut self, min_size: i32) -> Self {
+        self.props.min_size = std::cmp::max(0, min_size);
         self
     }
 
@@ -67,10 +75,7 @@ impl<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> StripeBuilder<'l, G, F>
         for _ in 0..count {
             let group_idx = self.group_idx.unwrap_or_else(|| {
                 let idx = self.owner.props.groups.len();
-                self.owner.props.groups.push(StripeGroup {
-                    props: self.props,
-                    min_size: 0,
-                });
+                self.owner.props.groups.push(self.props);
                 idx
             });
             stripes.push(Stripe {

@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 
 use fltk::prelude::GroupExt;
 
-use crate::grid::{StripeGroup, StripeProperties};
+use crate::grid::StripeProperties;
 use crate::WrapperFactory;
 
 use super::{GridBuilder, StripeGroupRef, StripeKind};
@@ -18,7 +18,10 @@ impl<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> StripeGroupBuilder<'l, 
         Self {
             owner,
             kind,
-            props: StripeProperties { stretch: 0 },
+            props: StripeProperties {
+                stretch: 0,
+                min_size: 0,
+            },
         }
     }
 
@@ -27,12 +30,14 @@ impl<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> StripeGroupBuilder<'l, 
         self
     }
 
+    pub fn with_min_size(mut self, min_size: i32) -> Self {
+        self.props.min_size = std::cmp::max(0, min_size);
+        self
+    }
+
     pub fn add(self) -> StripeGroupRef {
         let idx = self.owner.props.groups.len();
-        self.owner.props.groups.push(StripeGroup {
-            props: self.props,
-            min_size: 0,
-        });
+        self.owner.props.groups.push(self.props);
         StripeGroupRef {
             kind: self.kind,
             idx,
