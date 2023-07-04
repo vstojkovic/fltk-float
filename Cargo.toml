@@ -7,7 +7,7 @@ edition = "2021"
 description = "Flexible LayOut Autosizing Toolkit for fltk-rs"
 readme = "README.md"
 license = "Apache-2.0"
-keywords = ["gui", "ui", "user-interface", "graphics", "widgets", "layout"]
+keywords = ["gui", "ui", "user-interface", "widgets", "layout"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
