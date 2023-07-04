@@ -9,6 +9,8 @@ readme = "README.md"
 license = "Apache-2.0"
 keywords = ["gui", "ui", "user-interface", "widgets", "layout"]
 
+repository = "https://github.com/vstojkovic/fltk-float"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
