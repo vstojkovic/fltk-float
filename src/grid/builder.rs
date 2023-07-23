@@ -26,11 +26,13 @@ pub struct GridBuilder<G: GroupExt + Clone = Group, F: Borrow<WrapperFactory> = 
     next_col: usize,
 }
 
+#[derive(Clone, Copy)]
 pub struct StripeGroupRef {
     kind: StripeKind,
     idx: usize,
 }
 
+#[derive(Clone, Copy)]
 enum StripeKind {
     Row,
     Column,
