@@ -1,4 +1,5 @@
 use std::borrow::Borrow;
+use std::rc::Rc;
 
 use fltk::group::Group;
 use fltk::prelude::*;
@@ -47,7 +48,7 @@ struct Padding {
 }
 
 struct Cell {
-    element: Box<dyn LayoutElement>,
+    element: Rc<dyn LayoutElement>,
     min_size: Size,
     props: CellProperties,
 }

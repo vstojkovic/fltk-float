@@ -1,5 +1,6 @@
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use fltk::prelude::*;
 use fltk::widget::Widget;
@@ -43,15 +44,15 @@ impl SimpleWrapper {
 
 pub struct WrapperFactory {
     map: HashMap<TypeId, Box<dyn Any>>,
-    catch_all: Box<dyn Fn(Widget) -> Box<dyn LayoutElement>>,
+    catch_all: Box<dyn Fn(Widget) -> Rc<dyn LayoutElement>>,
 }
 
 impl WrapperFactory {
     pub fn new() -> Self {
-        Self::with_catch_all(|widget| Box::new(SimpleWrapper::wrap(widget)))
+        Self::with_catch_all(|widget| Rc::new(SimpleWrapper::wrap(widget)))
     }
 
-    pub fn with_catch_all(catch_all: impl Fn(Widget) -> Box<dyn LayoutElement> + 'static) -> Self {
+    pub fn with_catch_all(catch_all: impl Fn(Widget) -> Rc<dyn LayoutElement> + 'static) -> Self {
         Self {
             map: HashMap::new(),
             catch_all: Box::new(catch_all),
@@ -63,7 +64,7 @@ impl WrapperFactory {
             .insert(TypeId::of::<W>(), Box::new(Factory::<W>::new::<L>()));
     }
 
-    pub fn wrap<W: IntoWidget + 'static>(&self, widget: W) -> Box<dyn LayoutElement> {
+    pub fn wrap<W: IntoWidget + 'static>(&self, widget: W) -> Rc<dyn LayoutElement> {
         match self.factory_for::<W>() {
             Some(factory) => (factory.0)(widget),
             None => (self.catch_all)(widget.into_widget()),
@@ -77,10 +78,10 @@ impl WrapperFactory {
     }
 }
 
-struct Factory<W: IntoWidget + 'static>(fn(W) -> Box<dyn LayoutElement>);
+struct Factory<W: IntoWidget + 'static>(fn(W) -> Rc<dyn LayoutElement>);
 
 impl<W: IntoWidget + 'static> Factory<W> {
     fn new<L: LayoutWidgetWrapper<W> + 'static>() -> Self {
-        Self(|widget| Box::new(L::wrap(widget)))
+        Self(|widget| Rc::new(L::wrap(widget)))
     }
 }

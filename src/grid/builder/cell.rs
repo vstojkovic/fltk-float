@@ -1,4 +1,5 @@
 use std::borrow::Borrow;
+use std::rc::Rc;
 
 use fltk::prelude::GroupExt;
 
@@ -90,20 +91,20 @@ impl<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> CellBuilder<'l, G, F> {
     }
 
     pub fn add<E: LayoutElement + 'static>(self, element: E) {
-        self.add_boxed(Box::new(element));
+        self.add_shared(Rc::new(element));
     }
 
-    pub fn wrap<W: IntoWidget + 'static>(self, widget: W) -> W {
-        let element = self.owner.factory.borrow().wrap(widget.clone());
-        self.add_boxed(element);
-        widget
-    }
-
-    fn add_boxed(self, element: Box<dyn LayoutElement>) {
+    pub fn add_shared(self, element: Rc<dyn LayoutElement>) {
         self.owner.add_cell(Cell {
             element,
             min_size: Default::default(),
             props: self.props,
         });
+    }
+
+    pub fn wrap<W: IntoWidget + 'static>(self, widget: W) -> W {
+        let element = self.owner.factory.borrow().wrap(widget.clone());
+        self.add_shared(element);
+        widget
     }
 }
