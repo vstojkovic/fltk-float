@@ -3,9 +3,10 @@ use std::rc::Rc;
 
 use fltk::prelude::GroupExt;
 
-use super::GridBuilder;
 use crate::grid::{Cell, CellAlign, CellProperties, Padding, StripeCell};
 use crate::{IntoWidget, LayoutElement, WrapperFactory};
+
+use super::GridBuilder;
 
 pub struct CellBuilder<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> {
     owner: &'l mut GridBuilder<G, F>,

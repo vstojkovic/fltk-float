@@ -3,11 +3,11 @@ use std::borrow::Borrow;
 use fltk::group::Group;
 use fltk::prelude::*;
 
-use crate::WrapperFactory;
+use crate::{Padding, WrapperFactory};
+
+use super::{Cell, CellAlign, Grid, GridProperties, StripeCell};
 
 use self::group::StripeGroupBuilder;
-
-use super::{Cell, CellAlign, Grid, GridProperties, Padding, StripeCell};
 
 mod cell;
 mod group;
@@ -38,7 +38,7 @@ enum StripeKind {
     Column,
 }
 
-impl<G: GroupExt + Clone> GridBuilder<G, WrapperFactory> {
+impl<G: GroupExt + Clone> GridBuilder<G> {
     pub fn new(group: G) -> Self {
         Self::with_factory(group, WrapperFactory::new())
     }

@@ -6,6 +6,7 @@ pub mod frame;
 pub mod grid;
 pub mod input;
 pub mod misc;
+pub mod overlay;
 pub mod text;
 mod wrappers;
 
@@ -20,6 +21,14 @@ pub trait LayoutElement {
 pub struct Size {
     pub width: i32,
     pub height: i32,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct Padding {
+    left: i32,
+    top: i32,
+    right: i32,
+    bottom: i32,
 }
 
 pub trait IntoWidget: Clone {

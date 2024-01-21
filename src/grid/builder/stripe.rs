@@ -2,9 +2,10 @@ use std::borrow::Borrow;
 
 use fltk::prelude::GroupExt;
 
-use super::{GridBuilder, StripeKind};
 use crate::grid::{CellAlign, Stripe, StripeCell, StripeProperties};
 use crate::WrapperFactory;
+
+use super::{GridBuilder, StripeKind};
 
 pub struct StripeBuilder<'l, G: GroupExt + Clone, F: Borrow<WrapperFactory>> {
     owner: &'l mut GridBuilder<G, F>,

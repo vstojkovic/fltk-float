@@ -6,7 +6,7 @@ use fltk::prelude::*;
 
 use crate::WrapperFactory;
 
-use super::{LayoutElement, Size};
+use super::{LayoutElement, Padding, Size};
 
 mod builder;
 
@@ -37,14 +37,6 @@ struct GridProperties<G: GroupExt + Clone = Group> {
     groups: Vec<StripeProperties>,
     rows: Vec<Stripe>,
     cols: Vec<Stripe>,
-}
-
-#[derive(Debug, Default, Clone, Copy)]
-struct Padding {
-    left: i32,
-    top: i32,
-    right: i32,
-    bottom: i32,
 }
 
 struct Cell {
