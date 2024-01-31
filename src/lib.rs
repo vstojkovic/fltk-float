@@ -17,6 +17,16 @@ pub trait LayoutElement {
     fn layout(&self, x: i32, y: i32, width: i32, height: i32);
 }
 
+pub struct EmptyElement;
+
+impl LayoutElement for EmptyElement {
+    fn min_size(&self) -> Size {
+        Size::default()
+    }
+
+    fn layout(&self, _x: i32, _y: i32, _width: i32, _height: i32) {}
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Size {
     pub width: i32,
