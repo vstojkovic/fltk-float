@@ -7,6 +7,7 @@ pub mod grid;
 pub mod input;
 pub mod misc;
 pub mod overlay;
+pub mod scroll;
 pub mod text;
 mod wrappers;
 
