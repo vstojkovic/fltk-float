@@ -123,6 +123,14 @@ impl<G: GroupExt + Clone, F: Borrow<WrapperFactory>> GridBuilder<G, F> {
         self
     }
 
+    pub fn num_rows(&self) -> usize {
+        self.props.rows.len()
+    }
+
+    pub fn num_cols(&self) -> usize {
+        self.props.cols.len()
+    }
+
     pub fn row(&mut self) -> StripeBuilder<G, F> {
         StripeBuilder::new(self, StripeKind::Row, None)
     }
